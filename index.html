@@ -1,0 +1,1248 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" sizes="32x32" href="/loop/media/favicon32.png">
+  <link rel="apple-touch-icon" href="/loop/media/favicon32.png">
+  <title>Reset Game</title>
+  <link rel="stylesheet" href="/loop/css/tailwind.css">
+  <script src="/loop/js/ethers.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <style>
+    body {
+      box-sizing: border-box;
+    }
+    
+    * {
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(250, 66, 60, 0.3), 0 0 40px rgba(250, 66, 60, 0.1); }
+      50% { box-shadow: 0 0 30px rgba(250, 66, 60, 0.5), 0 0 60px rgba(250, 66, 60, 0.2); }
+    }
+    
+    @keyframes ring-pulse {
+      0%, 100% { opacity: 0.3; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.02); }
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+    
+    @keyframes shimmer {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+    
+    .timer-ring {
+      transform-origin: 50% 50%;
+      animation: ring-pulse 2s ease-in-out infinite;
+    }
+    
+    .glow-button {
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+    
+    .float-animation {
+      animation: float 3s ease-in-out infinite;
+    }
+    
+    .shimmer-text {
+      background: linear-gradient(90deg, #FA423C 0%, #ECEBEC 25%, #FA423C 50%, #ECEBEC 75%, #FA423C 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 3s linear infinite;
+    }
+    
+    .card-hover {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .card-hover:hover {
+      transform: translateY(-4px);
+      background: rgba(250, 66, 60, 0.1);
+    }
+    
+    .progress-ring-bg {
+      stroke: rgba(132, 139, 145, 0.3);
+    }
+    
+    .progress-ring-fill {
+      stroke: url(#gradient);
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1s ease-in-out;
+    }
+    
+    .modal-backdrop {
+      backdrop-filter: blur(8px);
+      background: rgba(20, 37, 48, 0.9);
+    }
+    
+    .icon-accent {
+      filter: invert(48%) sepia(79%) saturate(2476%) hue-rotate(346deg) brightness(98%) contrast(101%)
+        drop-shadow(0 3px 6px rgba(0, 0, 0, 0.5))
+        drop-shadow(0 0 16px rgba(250, 66, 60, 0.7))
+        drop-shadow(0 0 24px rgba(250, 66, 60, 0.4));
+    }
+    
+    #sponsor-amount::-webkit-inner-spin-button,
+    #sponsor-amount::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      appearance: none;
+      margin: 0;
+      opacity: 0;
+      pointer-events: none;
+      height: 0;
+      width: 0;
+    }
+    #sponsor-amount {
+      appearance: textfield;
+      -moz-appearance: textfield;
+    }
+    
+    #main-action-button {
+      min-width: 300px;
+      width: 300px;
+    }
+    #main-action-button.main-action-cooldown {
+      filter: grayscale(0.6);
+      pointer-events: none;
+      white-space: nowrap;
+      min-width: 300px;
+      width: 300px;
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+    
+    .quiz-option {
+      transition: all 0.2s ease;
+    }
+    
+    .quiz-option:hover:not(.selected):not(.disabled) {
+      background: rgba(250, 66, 60, 0.15);
+      border-color: rgba(250, 66, 60, 0.5);
+    }
+    
+    .quiz-option.selected {
+      background: rgba(250, 66, 60, 0.2);
+      border-color: #FA423C;
+    }
+    
+    .quiz-option.correct {
+      background: rgba(250, 66, 60, 0.15);
+      border-color: #FA423C;
+    }
+    
+    .quiz-option.incorrect {
+      background: rgba(132, 139, 145, 0.2);
+      border-color: #848B91;
+    }
+
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+ </head>
+ <body class="h-full bg-[#142530] text-[#ECEBEC] overflow-auto">
+  <div id="app-container" class="min-h-full w-full bg-[#142530]"><!-- Grainient WebGL background -->
+   <div id="grainient-container" class="fixed inset-0 pointer-events-none overflow-hidden">
+    <canvas id="grainient-bg" class="absolute inset-0 w-full h-full block"></canvas>
+    <div class="absolute inset-0 bg-[#142530]/40 pointer-events-none"></div>
+   </div>
+   <div class="relative z-10 max-w-[1052px] mx-auto px-4 py-8"><!-- Header -->
+    <header class="text-center mb-8">
+     <h1 class="text-4xl md:text-5xl font-bold tracking-tight flex flex-wrap items-center justify-center gap-3 md:gap-4">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 300" class="h-12 md:h-[3.75rem] w-auto flex-shrink-0" aria-label="Redbelly"><path fill="#283a46" d="M245.2,77.51,129.74,10.91a6.82,6.82,0,0,0-6.8,0L7.49,77.51a6.79,6.79,0,0,0-3.4,5.89V216.6a6.78,6.78,0,0,0,3.4,5.89l115.45,66.6a6.81,6.81,0,0,0,6.8,0l115.46-66.6a6.78,6.78,0,0,0,3.4-5.89V83.4A6.79,6.79,0,0,0,245.2,77.51ZM126.34,24.64,233.1,86.22a174.08,174.08,0,0,0-44.44,36.16C164.52,93.91,131,65.81,85.41,48.25ZM212.78,169a7.68,7.68,0,0,1-7-4.6,7.6,7.6,0,1,1,14.06,0A7.68,7.68,0,0,1,212.78,169Zm0-22.81a15.26,15.26,0,0,0-5.34,1c-4.35-6.42-9.06-13-14.39-19.55a169.16,169.16,0,0,1,39.46-33.21,369.29,369.29,0,0,0-19.19,51.81C213.14,146.23,213,146.18,212.78,146.18Zm-28.6-18.61a235.25,235.25,0,0,0-30,47.06C150.37,119.35,107.88,76,85.07,55.38,128.79,72.68,161,100,184.18,127.57Zm-34.75,71.11a7.67,7.67,0,0,1-7-4.6,7.43,7.43,0,0,1-.58-2.87,7.63,7.63,0,1,1,7.6,7.47Zm-2.09-22.6a15.2,15.2,0,0,0-3.82,1,269.34,269.34,0,0,0-57-57.34,15.19,15.19,0,0,0-9.87-22.57V57C97.65,75.56,143.92,119.72,147.34,176.08ZM80.33,115a7.67,7.67,0,0,1-14.06,0,7.6,7.6,0,1,1,14.06,0ZM69.88,57.22V97.16a15.25,15.25,0,0,0-8.94,5.9,248,248,0,0,0-39.3-18ZM17.69,97.09c10.14,15,30.09,47.12,42.17,83-.14.08-.28.15-.41.24A253.17,253.17,0,0,0,17.69,151ZM75.7,193a7.56,7.56,0,0,1-.57,2.86,7.67,7.67,0,0,1-14.06,0A7.59,7.59,0,1,1,75.7,193Zm-6.18,49.58-51.83-29.9v-53.9a244.24,244.24,0,0,1,37.1,26.71,15.17,15.17,0,0,0,12.37,22.75A134.4,134.4,0,0,1,69.52,242.58ZM76,246.34c1.35-12.84.4-26.07-2-39.2A15.87,15.87,0,0,0,76.12,206a290.65,290.65,0,0,1,45.94,66.87Zm49.72,18.8A297.12,297.12,0,0,0,81,201.36,15.31,15.31,0,0,0,68.1,177.65a14,14,0,0,0-1.71.18c-12.44-37.16-33-69.9-43.34-85A242.75,242.75,0,0,1,58.23,109.3a15.06,15.06,0,0,0-.28,2.78,15.34,15.34,0,0,0,24,12.65A262.24,262.24,0,0,1,138,181a15.16,15.16,0,0,0,3.7,23.39A357.42,357.42,0,0,0,125.75,265.14Zm5.71,7.27a349.43,349.43,0,0,1,16.69-66c.43,0,.84.13,1.28.13a15.16,15.16,0,0,0,4.88-.86,294,294,0,0,1,20.43,41.76ZM180.69,244a301.39,301.39,0,0,0-20.57-41.81,15.19,15.19,0,0,0-.76-22.6,229.34,229.34,0,0,1,29.21-46.71c4.85,6.06,9.19,12.07,13.2,18a15.25,15.25,0,0,0,4.43,24.47,300.88,300.88,0,0,0-6.07,57.47ZM207,228.84a296.93,296.93,0,0,1,5.88-52,15.37,15.37,0,0,0,4.36-.72,281.44,281.44,0,0,1,17,37ZM235,197c-3-6.94-7-15.19-11.89-24.14A15.21,15.21,0,0,0,219.85,148,367.33,367.33,0,0,1,235,105.51Z"/><path fill="#ff5050" d="M388.77,183.41l7.93,15.48H379.35l-7.93-15.48-8.31-16.22-.37-.75A15.38,15.38,0,0,0,349.6,159H334.11v39.88H318.62V112.21H373.4A23.23,23.23,0,0,1,389.88,119a23.51,23.51,0,0,1-6.81,37.89,20.81,20.81,0,0,1-6.7,1.86ZM373.4,143.54a7.18,7.18,0,0,0,3.22-.75,7.86,7.86,0,0,0,4.71-7.18,8.21,8.21,0,0,0-2.35-5.7,7.85,7.85,0,0,0-5.58-2.23H334.11v16Z"/><path fill="#283a46" d="M717.39,171.15a27.65,27.65,0,0,1-27.64,27.61H630.63V112.08h54.66a23.48,23.48,0,0,1,23.42,23.41A23,23,0,0,1,705,148.12,27.62,27.62,0,0,1,717.39,171.15Zm-71.27-27.74h39.29a7.93,7.93,0,1,0,0-15.85H646.12Zm43.63,39.75a12.14,12.14,0,1,0,0-24.27H646.12v24.39h43.63Z"/><path fill="#283a46" d="M904,183.41v15.48H864.79A26.88,26.88,0,0,1,852.65,196a27.46,27.46,0,0,1-12.52-12.63,26.91,26.91,0,0,1-2.85-12.14V112.21h15.49v60.55a12.34,12.34,0,0,0,10.53,10.52Z"/><path fill="#283a46" d="M992.46,183.41v15.48H953.22A26.88,26.88,0,0,1,941.08,196a27.46,27.46,0,0,1-12.52-12.63,26.91,26.91,0,0,1-2.85-12.14V112.21H941.2v60.55a12.34,12.34,0,0,0,10.53,10.52Z"/><path fill="#283a46" d="M984.4,198.76h.25l-.25.25Zm91.51-86.8-33.58,43.46-1.86,2.36v40.86H1025V158l-2.1-2.6L989.28,112h19.58l23.8,30.83,23.8-30.83Z"/><path fill="#ff5050" d="M494.56,127.68V112.21H423.42v63.15a23.36,23.36,0,0,0,23.3,23.4h47.84V183.28H446.72a8,8,0,0,1-7.93-7.92l.12-16.35h55.65V143.54H438.91V127.68Z"/><path fill="#283a46" d="M811.18,127.68V112.21H740v63.15a23.36,23.36,0,0,0,23.3,23.4h47.84V183.28H763.34a8,8,0,0,1-7.93-7.92l.13-16.35h55.64V143.54H755.54V127.68Z"/><path fill="#ff5050" d="M565.44,112.21l.13-.13H522.19v86.68h43.38A42.61,42.61,0,0,0,596.05,186c.87-.87,1.74-1.73,2.48-2.6a43.21,43.21,0,0,0-33.09-71.2Zm0,71.2-27.88-.08V127.69h27.88a27.86,27.86,0,1,1,0,55.72Z"/></svg>
+      <span class="shimmer-text">Community Loop</span>
+     </h1>
+     <p class="text-[#848B91] font-normal mt-2 text-lg md:text-xl">Participation creates value.</p>
+    </header><!-- Timer section + prize pool and action beside the clock -->
+    <section class="flex flex-col items-center md:flex-row md:items-center md:justify-center md:gap-12 lg:gap-16 mb-12">
+     <!-- Clock (left on desktop) -->
+     <div class="relative float-animation flex-shrink-0 flex justify-center">
+      <svg class="w-80 h-80 md:w-[26rem] md:h-[26rem] -rotate-90 block" viewbox="0 0 200 200"><defs>
+        <lineargradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+         <stop offset="0%" stop-color="#FA423C" />
+         <stop offset="50%" stop-color="#ECEBEC" />
+         <stop offset="100%" stop-color="#FA423C" />
+        </lineargradient>
+       </defs> <!-- Background ring --> <circle cx="100" cy="100" r="90" fill="none" stroke-width="8" class="progress-ring-bg timer-ring" /> <!-- Progress ring --> <circle id="progress-ring" cx="100" cy="100" r="90" fill="none" stroke-width="8" class="progress-ring-fill timer-ring" stroke-dasharray="565.48" stroke-dashoffset="141.37" />
+      </svg>
+      <div class="absolute inset-0 flex flex-col items-center justify-center overflow-hidden px-3 py-2"><span id="clock-status-line" class="text-xs text-[#848B91] mb-0.5 md:mb-1">The cycle is alive</span><span id="clock-label" class="text-sm md:text-lg font-semibold uppercase tracking-widest text-[#FA423C] mb-1 md:mb-2">Time Remaining</span>
+       <div id="timer-display" class="mono text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold tracking-wider text-[#ECEBEC] leading-tight text-center max-w-full min-w-0">04:32:17</div>
+       <span class="text-xs text-[#848B91] mt-1 md:mt-2">until prize distribution</span>
+       <p id="sync-block-label" class="text-center text-xs text-[#848B91] mt-0.5 md:mt-1 max-w-full truncate px-1" title="Last sync with the blockchain"></p>
+      </div>
+     </div>
+     <!-- Current community pool + reset timer (right on desktop) -->
+     <div class="mt-10 md:mt-0 flex flex-col items-center text-center min-w-0">
+      <p id="prize-label" class="text-sm uppercase tracking-widest text-[#848B91] mb-2">Current Community Pool</p>
+      <div class="flex items-baseline justify-center gap-2"><span id="prize-amount" class="mono text-5xl md:text-6xl font-bold text-[#ECEBEC]">0</span> <span id="prize-unit" class="text-2xl text-[#FA423C] font-semibold">RBNT</span></div>
+      <p id="prize-usd" class="text-[#848B91] mt-2 mono text-sm">-</p>
+      <button id="main-action-button" class="mt-6 px-12 py-4 bg-gradient-to-r from-[#FA423C] to-[#d63731] rounded-2xl text-xl font-semibold tracking-wide glow-button text-[#ECEBEC] hover:opacity-90 transition-all duration-300 active:scale-95"> Initiate Pulse </button>
+      <div class="mt-3 min-h-[4.25rem] flex flex-col items-center justify-start text-center">
+        <p id="main-action-desc" class="text-xs text-[#848B91]">Extend the cycle. Strengthen the pool.</p>
+        <p id="main-action-cost" class="text-xs text-[#848B91] mt-1"><span id="reset-fee-label">Cost: -</span> • Answer quiz to confirm</p>
+      </div>
+     </div>
+    </section><!-- Timer + Prize -->
+    <section class="mb-12">
+     <h2 id="rules-title" class="text-center text-lg font-semibold text-[#848B91] mb-8 uppercase tracking-widest">Energy Distribution Model</h2>
+     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><!-- Guardian of the Cycle -->
+      <div class="card-hover p-6 rounded-2xl bg-[#142530]/80 border border-[#848B91]/30">
+       <div class="w-12 h-12 rounded-xl bg-transparent flex items-center justify-center mb-4"><img src="/loop/media/icons/crown_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg" alt="" class="w-8 h-8 icon-accent" width="24" height="24" />
+       </div>
+       <h3 class="font-semibold text-[#ECEBEC] mb-1">Guardian of the Cycle</h3>
+       <p class="text-3xl font-bold text-[#FA423C] mono">40%</p>
+       <p class="text-xs text-[#848B91] mt-2">Maintained the system stability</p>
+      </div><!-- Core energy source -->
+      <div class="card-hover p-6 rounded-2xl bg-[#142530]/80 border border-[#848B91]/30">
+       <div class="w-12 h-12 rounded-xl bg-transparent flex items-center justify-center mb-4"><img src="/loop/media/icons/bolt_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg" alt="" class="w-8 h-8 icon-accent" width="24" height="24" />
+       </div>
+       <h3 class="font-semibold text-[#ECEBEC] mb-1">Core energy source</h3>
+       <p class="text-3xl font-bold text-[#FA423C] mono">30%</p>
+       <p class="text-xs text-[#848B91] mt-2">Most active participant</p>
+      </div><!-- Carrier of randomness -->
+      <div class="card-hover p-6 rounded-2xl bg-[#142530]/80 border border-[#848B91]/30">
+       <div class="w-12 h-12 rounded-xl bg-transparent flex items-center justify-center mb-4"><img src="/loop/media/icons/ifl_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg" alt="" class="w-8 h-8 icon-accent" width="24" height="24" />
+       </div>
+       <h3 class="font-semibold text-[#ECEBEC] mb-1">Carrier of randomness</h3>
+       <p class="text-3xl font-bold text-[#FA423C] mono">20%</p>
+       <p class="text-xs text-[#848B91] mt-2">System-selected contributor</p>
+      </div><!-- Continuity Pool -->
+      <div class="card-hover p-6 rounded-2xl bg-[#142530]/80 border border-[#848B91]/30">
+       <div class="w-12 h-12 rounded-xl bg-transparent flex items-center justify-center mb-4"><img src="/loop/media/icons/recycling_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg" alt="" class="w-8 h-8 icon-accent" width="24" height="24" />
+       </div>
+       <h3 class="font-semibold text-[#ECEBEC] mb-1">Continuity Pool</h3>
+       <p class="text-3xl font-bold text-[#FA423C] mono">10%</p>
+       <p class="text-xs text-[#848B91] mt-2">Flows into the next cycle, sustaining long-term system growth.</p>
+      </div>
+     </div>
+    </section><!-- Sponsors Section -->
+    <section class="mb-12">
+     <div class="p-6 rounded-2xl bg-gradient-to-br from-[#FA423C]/10 to-transparent border border-[#848B91]/30">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+       <div>
+        <h3 class="text-lg font-semibold mb-1 text-[#ECEBEC] flex items-center gap-2"><img src="/loop/media/icons/partner_heart_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg" alt="" class="w-6 h-6 flex-shrink-0 icon-accent" width="24" height="24" />Reinforce This Cycle</h3>
+        <p class="text-sm text-[#848B91]">Strengthen the pool. Build the cycle.</p>
+       </div><button id="sponsor-button" class="px-6 py-3 bg-[#FA423C]/20 border border-[#FA423C]/40 rounded-xl hover:bg-[#FA423C]/30 transition-all duration-200 font-medium text-[#ECEBEC]"> + Add Contribution </button>
+      </div>      <!-- Sponsors List -->
+      <div class="mt-6 pt-6 border-t border-[#848B91]/30">
+       <p class="text-xs text-[#848B91] uppercase tracking-widest mb-4">Current Reinforcements</p>
+       <div id="sponsors-list" class="space-y-3">
+        <p class="text-sm text-[#848B91]">No reinforcements yet.</p>
+       </div>
+      </div>
+     </div>
+    </section><!-- Footer -->
+    <footer class="text-center pb-10">
+     <div class="w-[60%] mx-auto border-t border-[#848B91]/30 pt-6 mb-4"></div>
+     <p class="text-xs text-[#848B91]">A living loop powered by participation.<br>Built on time, action, and contribution.<br>Not a game. Not a protocol.<br>A social mechanism.</p>
+     <p class="text-xs text-[#848B91] mt-3 flex items-center justify-center gap-1.5 flex-wrap">Smart Contract: <span id="contract-address-short" class="mono">0x8B7A8e41cAbd3cB74B18714c400B6822ce1FC344</span><a id="contract-address-link" href="https://redbelly.testnet.routescan.io/address/0x8B7A8e41cAbd3cB74B18714c400B6822ce1FC344" target="_blank" rel="noopener noreferrer" class="text-[#FA423C] hover:text-[#ECEBEC] transition-colors inline-flex" aria-label="View contract on block explorer"><svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg></a></p>
+    </footer>
+   </div>
+  </div>
+  <div class="fixed bottom-6 left-6 z-20 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA423C]/10 border border-[#FA423C]/30 pointer-events-none"><span class="w-2 h-2 rounded-full bg-[#FA423C] animate-pulse"></span><span class="text-sm text-[#D9D9D9]" id="round-label">Cycle #- • -</span></div>
+  <div id="wallet-address" class="fixed bottom-6 right-6 z-20 hidden px-4 py-2 rounded-full bg-[#FA423C]/10 border border-[#FA423C]/30 mono text-sm text-[#D9D9D9]"></div><!-- Quiz Modal -->
+  <div id="quiz-modal" class="fixed inset-0 z-50 hidden">
+   <div class="modal-backdrop absolute inset-0" id="modal-backdrop"></div>
+   <div class="absolute inset-0 flex items-center justify-center p-6">
+    <div class="relative w-full max-w-md bg-[#142530] rounded-3xl border border-[#848B91]/30 p-8 transform transition-all duration-300 scale-95 opacity-0" id="modal-content"><!-- Close button --> <button id="close-modal" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#848B91]/20 flex items-center justify-center hover:bg-[#848B91]/30 transition-colors text-[#ECEBEC]">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg></button>
+     <h2 class="text-2xl font-bold text-[#FA423C] mb-4 flex items-center justify-center gap-2"><svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>Knowledge Gate</h2>
+     <div class="w-full h-2 rounded-full bg-[#848B91]/30 mb-6 overflow-hidden"><div id="quiz-timer-bar" class="h-full rounded-full bg-[#FA423C] transition-all duration-1000 ease-linear" style="width: 100%"></div></div>
+     <div class="text-center mb-6"><h3 id="quiz-question" class="text-xl font-semibold text-[#ECEBEC]">What is 7 × 8?</h3></div><!-- Options -->
+     <div id="quiz-options" class="space-y-3 mb-6"><button class="quiz-option w-full p-4 rounded-xl border border-[#848B91]/40 text-left hover:border-[#FA423C]/50 transition-all text-[#ECEBEC]" data-answer="54"> <span class="mono">A.</span> 54 </button> <button class="quiz-option w-full p-4 rounded-xl border border-[#848B91]/40 text-left hover:border-[#FA423C]/50 transition-all text-[#ECEBEC]" data-answer="56"> <span class="mono">B.</span> 56 </button> <button class="quiz-option w-full p-4 rounded-xl border border-[#848B91]/40 text-left hover:border-[#FA423C]/50 transition-all text-[#ECEBEC]" data-answer="58"> <span class="mono">C.</span> 58 </button> <button class="quiz-option w-full p-4 rounded-xl border border-[#848B91]/40 text-left hover:border-[#FA423C]/50 transition-all text-[#ECEBEC]" data-answer="64"> <span class="mono">D.</span> 64 </button>
+     </div><!-- Status -->
+     <div id="quiz-status" class="text-center text-sm text-[#848B91]">
+      Answer the question to unlock the reset action.
+     </div><!-- Confirm Transaction (hidden initially) --> <button id="confirm-transaction" class="hidden w-full mt-4 py-4 bg-gradient-to-r from-[#FA423C] to-[#d63731] rounded-xl font-semibold text-[#ECEBEC] hover:opacity-90 transition-all">Confirm Transaction</button>
+    </div>
+   </div>
+  </div><!-- Sponsor Modal -->
+  <div id="sponsor-modal" class="fixed inset-0 z-50 hidden">
+   <div class="modal-backdrop absolute inset-0" id="sponsor-backdrop"></div>
+   <div class="absolute inset-0 flex items-center justify-center p-6">
+    <div class="relative w-full max-w-md bg-[#142530] rounded-3xl border border-[#848B91]/30 p-8" id="sponsor-content"><button id="close-sponsor" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#848B91]/20 flex items-center justify-center hover:bg-[#848B91]/30 transition-colors text-[#ECEBEC]">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg></button>
+     <div class="text-center mb-6"><span class="text-4xl mb-4 block">🎁</span>
+      <h3 class="text-xl font-semibold text-[#ECEBEC]">Reinforce This Cycle</h3>
+      <p class="text-sm text-[#848B91] mt-2">Your contribution strengthens the community pool and increases the next cycle's potential.</p>
+     </div>
+     <div class="space-y-4">
+      <div><label class="text-sm text-[#848B91] mb-2 block" for="sponsor-amount">Contribution Amount (RBNT)</label> <input id="sponsor-amount" type="number" step="1" min="1" value="1" class="w-full p-4 bg-[#142530] border border-[#848B91]/40 rounded-xl mono text-[#ECEBEC] focus:outline-none focus:border-[#FA423C] transition-colors">
+      </div>
+      <div><label class="text-sm text-[#848B91] mb-2 block" for="sponsor-name">Display Name (optional)</label> <input id="sponsor-name" type="text" placeholder="anonymous" class="w-full p-4 bg-[#142530] border border-[#848B91]/40 rounded-xl text-[#ECEBEC] focus:outline-none focus:border-[#FA423C] transition-colors">
+      </div><button id="submit-sponsor" class="w-full py-4 bg-gradient-to-r from-[#FA423C] to-[#d63731] rounded-xl font-semibold text-[#ECEBEC] hover:opacity-90 transition-all mt-4"> Confirm Contribution </button>
+     </div>
+    </div>
+   </div>
+  </div><!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 bg-[#FA423C] text-[#ECEBEC] rounded-xl font-medium opacity-0 transform translate-y-4 transition-all duration-300 pointer-events-none z-50">
+   Transaction submitted successfully!
+  </div>
+  <script>
+
+    // === Grainient WebGL background (palette from page: #FA423C, #142530, #ECEBEC) ===
+    (function initGrainient() {
+      function hexToRgb(hex) {
+        var m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        if (!m) return [1, 1, 1];
+        return [parseInt(m[1], 16) / 255, parseInt(m[2], 16) / 255, parseInt(m[3], 16) / 255];
+      }
+      var vertexSrc = '#version 300 es\nin vec2 position;\nvoid main(){gl_Position=vec4(position,0.0,1.0);}\n';
+      var fragmentSrc = '#version 300 es\nprecision highp float;\nuniform vec2 iResolution;\nuniform float iTime;\nuniform float uTimeSpeed;\nuniform float uColorBalance;\nuniform float uWarpStrength;\nuniform float uWarpFrequency;\nuniform float uWarpSpeed;\nuniform float uWarpAmplitude;\nuniform float uBlendAngle;\nuniform float uBlendSoftness;\nuniform float uRotationAmount;\nuniform float uNoiseScale;\nuniform float uGrainAmount;\nuniform float uGrainScale;\nuniform float uGrainAnimated;\nuniform float uContrast;\nuniform float uGamma;\nuniform float uSaturation;\nuniform vec2 uCenterOffset;\nuniform float uZoom;\nuniform vec3 uColor1;\nuniform vec3 uColor2;\nuniform vec3 uColor3;\nout vec4 fragColor;\n#define S(a,b,t) smoothstep(a,b,t)\nmat2 Rot(float a){float s=sin(a),c=cos(a);return mat2(c,-s,s,c);}\nvec2 hash(vec2 p){p=vec2(dot(p,vec2(2127.1,81.17)),dot(p,vec2(1269.5,283.37)));return fract(sin(p)*43758.5453);}\nfloat noise(vec2 p){vec2 i=floor(p),f=fract(p),u=f*f*(3.0-2.0*f);float n=mix(mix(dot(-1.0+2.0*hash(i+vec2(0.0,0.0)),f-vec2(0.0,0.0)),dot(-1.0+2.0*hash(i+vec2(1.0,0.0)),f-vec2(1.0,0.0)),u.x),mix(dot(-1.0+2.0*hash(i+vec2(0.0,1.0)),f-vec2(0.0,1.0)),dot(-1.0+2.0*hash(i+vec2(1.0,1.0)),f-vec2(1.0,1.0)),u.x),u.y);return 0.5+0.5*n;}\nvoid mainImage(out vec4 o, vec2 C){float t=iTime*uTimeSpeed;vec2 uv=C/iResolution.xy;float ratio=iResolution.x/iResolution.y;vec2 tuv=uv-0.5+uCenterOffset;tuv/=max(uZoom,0.001);float degree=noise(vec2(t*0.1,tuv.x*tuv.y)*uNoiseScale);tuv.y*=1.0/ratio;tuv*=Rot(radians((degree-0.5)*uRotationAmount+180.0));tuv.y*=ratio;float frequency=uWarpFrequency;float ws=max(uWarpStrength,0.001);float amplitude=uWarpAmplitude/ws;float warpTime=t*uWarpSpeed;tuv.x+=sin(tuv.y*frequency+warpTime)/amplitude;tuv.y+=sin(tuv.x*(frequency*1.5)+warpTime)/(amplitude*0.5);vec3 colLav=uColor1;vec3 colOrg=uColor2;vec3 colDark=uColor3;float b=uColorBalance;float s=max(uBlendSoftness,0.0);mat2 blendRot=Rot(radians(uBlendAngle));float blendX=(tuv*blendRot).x;float edge0=-0.3-b-s;float edge1=0.2-b+s;float v0=0.5-b+s;float v1=-0.3-b-s;vec3 layer1=mix(colDark,colOrg,S(edge0,edge1,blendX));vec3 layer2=mix(colOrg,colLav,S(edge0,edge1,blendX));vec3 col=mix(layer1,layer2,S(v0,v1,tuv.y));vec2 grainUv=uv*max(uGrainScale,0.001);if(uGrainAnimated>0.5){grainUv+=vec2(iTime*0.05);}\nfloat grain=fract(sin(dot(grainUv,vec2(12.9898,78.233)))*43758.5453);col+=(grain-0.5)*uGrainAmount;col=(col-0.5)*uContrast+0.5;float luma=dot(col,vec3(0.2126,0.7152,0.0722));col=mix(vec3(luma),col,uSaturation);col=pow(max(col,0.0),vec3(1.0/max(uGamma,0.001)));col=clamp(col,0.0,1.0);o=vec4(col,1.0);}\nvoid main(){vec4 o=vec4(0.0);mainImage(o,gl_FragCoord.xy);fragColor=o;}\n';
+      var container = document.getElementById('grainient-container');
+      var canvas = document.getElementById('grainient-bg');
+      if (!container || !canvas) return;
+      var gl = canvas.getContext('webgl2');
+      if (!gl) return;
+      function compileShader(type, src) {
+        var shader = gl.createShader(type);
+        gl.shaderSource(shader, src);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+          console.warn('Grainient shader compile:', gl.getShaderInfoLog(shader));
+          gl.deleteShader(shader);
+          return null;
+        }
+        return shader;
+      }
+      var vs = compileShader(gl.VERTEX_SHADER, vertexSrc);
+      var fs = compileShader(gl.FRAGMENT_SHADER, fragmentSrc);
+      if (!vs || !fs) return;
+      var program = gl.createProgram();
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+      gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.warn('Grainient program link:', gl.getProgramInfoLog(program));
+        return;
+      }
+      gl.useProgram(program);
+      var c1 = hexToRgb('#5c2828'), c2 = hexToRgb('#142530'), c3 = hexToRgb('#142530');
+      var uniforms = {
+        iTime: 0,
+        iResolution: new Float32Array([1, 1]),
+        uTimeSpeed: 0.25,
+        uColorBalance: 0,
+        uWarpStrength: 1,
+        uWarpFrequency: 5,
+        uWarpSpeed: 2,
+        uWarpAmplitude: 50,
+        uBlendAngle: 0,
+        uBlendSoftness: 0.08,
+        uRotationAmount: 500,
+        uNoiseScale: 2,
+        uGrainAmount: 0.02,
+        uGrainScale: 2,
+        uGrainAnimated: 0,
+        uContrast: 1.4,
+        uGamma: 1,
+        uSaturation: 0.88,
+        uCenterOffset: new Float32Array([0, 0]),
+        uZoom: 0.9,
+        uColor1: new Float32Array(c1),
+        uColor2: new Float32Array(c2),
+        uColor3: new Float32Array(c3)
+      };
+      var locs = {};
+      ['iTime','iResolution','uTimeSpeed','uColorBalance','uWarpStrength','uWarpFrequency','uWarpSpeed','uWarpAmplitude','uBlendAngle','uBlendSoftness','uRotationAmount','uNoiseScale','uGrainAmount','uGrainScale','uGrainAnimated','uContrast','uGamma','uSaturation','uCenterOffset','uZoom','uColor1','uColor2','uColor3'].forEach(function(name) {
+        locs[name] = gl.getUniformLocation(program, name);
+      });
+      var posLoc = gl.getAttribLocation(program, 'position');
+      var buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
+      var t0 = performance.now();
+      function setSize() {
+        var w = container.clientWidth || 1;
+        var h = container.clientHeight || 1;
+        if (canvas.width !== w || canvas.height !== h) {
+          canvas.width = w;
+          canvas.height = h;
+          gl.viewport(0, 0, w, h);
+          uniforms.iResolution[0] = w;
+          uniforms.iResolution[1] = h;
+        }
+      }
+      function draw() {
+        setSize();
+        uniforms.iTime = (performance.now() - t0) * 0.001;
+        gl.uniform1f(locs.iTime, uniforms.iTime);
+        gl.uniform2fv(locs.iResolution, uniforms.iResolution);
+        gl.uniform1f(locs.uTimeSpeed, uniforms.uTimeSpeed);
+        gl.uniform1f(locs.uColorBalance, uniforms.uColorBalance);
+        gl.uniform1f(locs.uWarpStrength, uniforms.uWarpStrength);
+        gl.uniform1f(locs.uWarpFrequency, uniforms.uWarpFrequency);
+        gl.uniform1f(locs.uWarpSpeed, uniforms.uWarpSpeed);
+        gl.uniform1f(locs.uWarpAmplitude, uniforms.uWarpAmplitude);
+        gl.uniform1f(locs.uBlendAngle, uniforms.uBlendAngle);
+        gl.uniform1f(locs.uBlendSoftness, uniforms.uBlendSoftness);
+        gl.uniform1f(locs.uRotationAmount, uniforms.uRotationAmount);
+        gl.uniform1f(locs.uNoiseScale, uniforms.uNoiseScale);
+        gl.uniform1f(locs.uGrainAmount, uniforms.uGrainAmount);
+        gl.uniform1f(locs.uGrainScale, uniforms.uGrainScale);
+        gl.uniform1f(locs.uGrainAnimated, uniforms.uGrainAnimated);
+        gl.uniform1f(locs.uContrast, uniforms.uContrast);
+        gl.uniform1f(locs.uGamma, uniforms.uGamma);
+        gl.uniform1f(locs.uSaturation, uniforms.uSaturation);
+        gl.uniform2fv(locs.uCenterOffset, uniforms.uCenterOffset);
+        gl.uniform1f(locs.uZoom, uniforms.uZoom);
+        gl.uniform3fv(locs.uColor1, uniforms.uColor1);
+        gl.uniform3fv(locs.uColor2, uniforms.uColor2);
+        gl.uniform3fv(locs.uColor3, uniforms.uColor3);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.enableVertexAttribArray(posLoc);
+        gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      }
+      setSize();
+      var raf = 0;
+      function loop() {
+        raf = requestAnimationFrame(loop);
+        draw();
+      }
+      loop();
+      var ro = new ResizeObserver(setSize);
+      ro.observe(container);
+    })();
+
+    // === Backend & contract config (adjust for your deployment) ===
+    const GAME_CONFIG = {
+      apiBase: '/api/loop',
+      contractAddress: '0x8B7A8e41cAbd3cB74B18714c400B6822ce1FC344',
+      chainId: 153,
+      rpcUrl: 'https://governors.testnet.redbelly.network',
+      blockExplorerUrl: 'https://redbelly.testnet.routescan.io/address/',
+      deployBlock: 2908700  // contract deployment block on Redbelly testnet
+    };
+
+    const BOOTSTRAP_ADDRESS = '0xDAFEA492D9c6733ae3d56b7Ed1ADB60692c98Bc5';
+    const BOOTSTRAP_ABI = ['function getContractAddress(string memory contractName) view returns (address)'];
+    const PERMISSION_ABI = ['function isAllowed(address _address) view returns (bool)'];
+
+    const POT_GAME_ABI = [
+      'function currentRoundId() view returns (uint256)',
+      'function currentResetFee() view returns (uint256)',
+      'function baseResetFee() view returns (uint256)',
+      'function operator() view returns (address)',
+      'function resetTimer(uint256 expiresAt, bytes calldata signature) payable',
+      'function sponsorPot() payable',
+      'function finalizeRound(address mostActive, bytes mostActiveSignature, address randomWinner, bytes randomWinnerSignature)',
+      'function finalizeRoundPermissionless(address mostActive, bytes mostActiveSignature, address randomWinner, bytes randomWinnerSignature)',
+      'event Sponsored(uint256 indexed roundId, address indexed sponsor, uint256 amount)'
+    ];
+
+    // Default configuration (UI)
+    const defaultConfig = {
+      prize_label: 'Current Community Pool',
+      button_text: 'Initiate Pulse',
+      rules_title: 'Energy Distribution Model',
+      background_color: '#142530',
+      accent_color: '#FA423C',
+      text_color: '#ECEBEC',
+      card_color: '#142530',
+      success_color: '#FA423C',
+      font_family: 'Space Grotesk'
+    };
+
+    let config = { ...defaultConfig };
+
+    // Wallet & contract state
+    let walletProvider = null;
+    let walletSigner = null;
+    let userAddress = null;
+    let contractInstance = null;
+
+    // Timer state (from chain or placeholder)
+    let timerSeconds = 0;
+    let quizTimerInterval = null;
+    let quizTimeLeft = 15;
+    let pendingSignature = null;
+    let pendingExpiresAt = null;
+    let lastRoundEndTime = 0;
+    let chainTimeAtLastRefresh = 0;
+    let localTimeAtLastRefresh = 0;
+    let lastSyncBlockNumber = 0;
+    let quizCooldownUntil = 0;
+    let quizCooldownInterval = null;
+
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    // Format time
+    function formatTime(seconds) {
+      const hrs = Math.floor(seconds / 3600);
+      const mins = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+      return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    function getProvider() {
+      if (walletProvider) return walletProvider;
+      if (typeof ethers !== 'undefined' && GAME_CONFIG.rpcUrl) {
+        return new ethers.JsonRpcProvider(GAME_CONFIG.rpcUrl);
+      }
+      return null;
+    }
+
+    async function checkCAT(provider, address) {
+      try {
+        const bootstrap = new ethers.Contract(BOOTSTRAP_ADDRESS, BOOTSTRAP_ABI, provider);
+        const permissionAddr = await bootstrap.getContractAddress('permission');
+        const permission = new ethers.Contract(permissionAddr, PERMISSION_ABI, provider);
+        const isAllowed = await permission.isAllowed(address);
+        return !!isAllowed;
+      } catch (e) {
+        console.warn('CAT check failed', e);
+        return false;
+      }
+    }
+
+    async function connectWallet() {
+      if (!window.ethereum) {
+        showToast('Install MetaMask or another Web3 wallet.', true);
+        return;
+      }
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const accounts = await provider.send('eth_requestAccounts', []);
+      if (!accounts.length) return;
+      const chainId = Number(await provider.send('eth_chainId', []));
+      if (chainId !== GAME_CONFIG.chainId) {
+        try {
+          await provider.send('wallet_switchEthereumChain', [{ chainId: ethers.toBeHex(GAME_CONFIG.chainId) }]);
+        } catch (e) {
+          showToast('Switch to Redbelly Testnet (Chain ID 153) in your wallet.', true);
+          return;
+        }
+      }
+      const signer = await provider.getSigner();
+      const addr = (await signer.getAddress()).toLowerCase();
+      const hasCAT = await checkCAT(provider, addr);
+      if (!hasCAT) {
+        showToast('This wallet is not verified (CAT). Change wallet or complete KYC to participate.', true);
+        return;
+      }
+      walletProvider = provider;
+      walletSigner = signer;
+      userAddress = addr;
+      contractInstance = new ethers.Contract(GAME_CONFIG.contractAddress, POT_GAME_ABI, walletSigner);
+      const addrEl = document.getElementById('wallet-address');
+      if (addrEl) {
+        addrEl.textContent = addr.slice(0, 6) + '…' + addr.slice(-4);
+        addrEl.classList.remove('hidden');
+      }
+      await refreshRoundFromChain();
+    }
+
+    async function handleAccountsChanged(accounts) {
+      if (!accounts || accounts.length === 0) {
+        walletProvider = null;
+        walletSigner = null;
+        userAddress = null;
+        contractInstance = null;
+        quizCooldownUntil = 0;
+        if (quizCooldownInterval) {
+          clearInterval(quizCooldownInterval);
+          quizCooldownInterval = null;
+        }
+        const addrEl = document.getElementById('wallet-address');
+        if (addrEl) addrEl.classList.add('hidden');
+        updateMainButton();
+        return;
+      }
+      if (!walletProvider) return;
+      try {
+        walletSigner = await walletProvider.getSigner();
+        const addr = (await walletSigner.getAddress()).toLowerCase();
+        const hasCAT = await checkCAT(walletProvider, addr);
+        if (!hasCAT) {
+          walletProvider = null;
+          walletSigner = null;
+          userAddress = null;
+          contractInstance = null;
+          quizCooldownUntil = 0;
+          if (quizCooldownInterval) {
+            clearInterval(quizCooldownInterval);
+            quizCooldownInterval = null;
+          }
+          const addrEl = document.getElementById('wallet-address');
+          if (addrEl) addrEl.classList.add('hidden');
+          updateMainButton();
+          showToast('This wallet is not verified (CAT). Change wallet or complete KYC to participate.', true);
+          return;
+        }
+        userAddress = addr;
+        contractInstance = new ethers.Contract(GAME_CONFIG.contractAddress, POT_GAME_ABI, walletSigner);
+        const addrEl = document.getElementById('wallet-address');
+        if (addrEl) {
+          addrEl.textContent = addr.slice(0, 6) + '…' + addr.slice(-4);
+          addrEl.classList.remove('hidden');
+        }
+        quizCooldownUntil = 0;
+        if (quizCooldownInterval) {
+          clearInterval(quizCooldownInterval);
+          quizCooldownInterval = null;
+        }
+        await refreshRoundFromChain();
+        updateMainButton();
+      } catch (e) {
+        console.warn('Account change handling failed', e);
+      }
+    }
+
+    // RBNT price cache – refresh at most once per hour
+    let rbnPriceCache = { value: null, fetchedAt: 0 };
+    const RBN_PRICE_TTL_MS = 60 * 60 * 1000; // 1 godzina
+
+    async function getRbnUsdPrice() {
+      if (rbnPriceCache.value !== null && Date.now() - rbnPriceCache.fetchedAt < RBN_PRICE_TTL_MS) {
+        return rbnPriceCache.value;
+      }
+      try {
+        const r = await fetch('https://cdn.routescan.io/api/market?coingeckoId=redbelly-network-token');
+        if (!r.ok) return rbnPriceCache.value; // keep last value if API does not respond
+        const data = await r.json();
+        const item = Array.isArray(data) ? data[0] : data;
+        const price = item && typeof item.current_price === 'number' ? item.current_price : null;
+        if (price !== null) rbnPriceCache = { value: price, fetchedAt: Date.now() };
+        return price;
+      } catch (e) {
+        console.warn('RBNT price fetch failed', e);
+        return rbnPriceCache.value; // keep last known price on error
+      }
+    }
+
+    async function fetchRoundEndTimeAndPot(provider, roundId) {
+      const iface = new ethers.Interface(['function rounds(uint256) view returns (uint64 endTime, uint128 potBalance, address lastResetter, address mostActive, address randomWinner, bytes32 entropy, bool finalized)']);
+      const data = iface.encodeFunctionData('rounds', [roundId]);
+      const result = await provider.call({ to: GAME_CONFIG.contractAddress, data });
+      const hex = typeof result === 'string' ? result.slice(2) : result.slice(2).toString('hex');
+      const endTime = Number(BigInt('0x' + hex.slice(0, 64)));
+      const potBalance = BigInt('0x' + hex.slice(64, 128));
+      return { endTime, potBalance };
+    }
+
+    async function refreshRoundFromChain() {
+      const apiBase = GAME_CONFIG.apiBase || '/api';
+      try {
+        // Single backend request instead of five RPC calls
+        const r = await fetch(apiBase + '/round-state', { cache: 'no-store' });
+        if (!r.ok) throw new Error('round-state API error ' + r.status);
+        const state = await r.json();
+
+        const chainNow = state.chainNow;
+        const localNow = Math.floor(Date.now() / 1000);
+        chainTimeAtLastRefresh = chainNow;
+        localTimeAtLastRefresh = localNow;
+        lastSyncBlockNumber = state.currentBlock || 0;
+
+        const roundId = state.roundId;
+        const endTime = state.endTime;
+        const potBalance = BigInt(state.potBalance || '0');
+        const fee = BigInt(state.fee || '0');
+
+        lastRoundEndTime = endTime;
+        timerSeconds = Math.max(0, endTime > chainNow ? endTime - chainNow : 0);
+        document.getElementById('round-label').textContent = `Cycle #${roundId} • ${timerSeconds > 0 ? 'Live' : 'Ended'}`;
+        const syncEl = document.getElementById('sync-block-label');
+        if (syncEl) syncEl.textContent = lastSyncBlockNumber > 0 ? `Synchronized with Block #${lastSyncBlockNumber.toLocaleString()}` : '';
+        document.getElementById('prize-amount').textContent = parseFloat(ethers.formatEther(potBalance)).toFixed(2);
+        const prizeUsdEl = document.getElementById('prize-usd');
+        const rbnPrice = await getRbnUsdPrice();
+        if (rbnPrice != null) {
+          const rbnAmount = parseFloat(ethers.formatEther(potBalance));
+          const usdValue = rbnAmount * rbnPrice;
+          prizeUsdEl.textContent = usdValue >= 0.01 ? `≈ $${usdValue.toFixed(2)}` : (usdValue > 0 ? `≈ $${usdValue.toFixed(4)}` : '≈ $0.00');
+        } else {
+          prizeUsdEl.textContent = '-';
+        }
+        document.getElementById('reset-fee-label').textContent = `Cost: ${ethers.formatEther(fee)} RBNT`;
+        updateMainButton();
+        await loadSponsorsFromChain(Number(roundId));
+      } catch (e) {
+        console.warn('Chain read failed', e);
+      }
+    }
+
+    // Sponsor display names cache { key: addresses-string, names: {} }
+    let displayNamesCache = null;
+
+    async function loadSponsorsFromChain(roundId) {
+      const el = document.getElementById('sponsors-list');
+      if (!el) return;
+      try {
+        const apiBase = GAME_CONFIG.apiBase || '/api';
+
+        // Single backend request – server chunks and caches on its side
+        const r = await fetch(apiBase + '/sponsors?roundId=' + roundId, { cache: 'no-store' });
+        if (!r.ok) throw new Error('Sponsors API error ' + r.status);
+        const bySponsorRaw = await r.json(); // { "0xAddr": "amountWei", ... }
+
+        const entries = Object.entries(bySponsorRaw)
+          .map(([addr, amtStr]) => [addr, BigInt(amtStr)])
+          .sort((a, b) => (b[1] > a[1] ? 1 : -1));
+
+        if (entries.length === 0) {
+          el.innerHTML = '<p class="text-sm text-[#848B91]">No reinforcements yet.</p>';
+          return;
+        }
+
+        const addresses = entries.map(([a]) => a).join(',');
+
+        // Fetch display names only when the address list changes
+        if (!displayNamesCache || displayNamesCache.key !== addresses) {
+          let fetchedNames = {};
+          try {
+            const nr = await fetch(apiBase + '/sponsor-display-names?addresses=' + encodeURIComponent(addresses));
+            if (nr.ok) fetchedNames = await nr.json();
+          } catch (e) {
+            console.warn('Display names fetch failed', e);
+          }
+          displayNamesCache = { key: addresses, names: fetchedNames };
+        }
+        const displayNames = displayNamesCache.names || {};
+
+        const escapeHtml = (s) => {
+          const div = document.createElement('div');
+          div.textContent = s;
+          return div.innerHTML;
+        };
+        const anonymizeAddress = (a) => (a && a.length >= 10) ? (a.slice(0, 6) + '∴⟡∴' + a.slice(-4)) : a;
+        el.innerHTML = entries.map(([addr, amt]) => {
+          const short = anonymizeAddress(addr);
+          const displayName = displayNames[addr.toLowerCase()] || short;
+          const safeName = escapeHtml(displayName);
+          const label = addr === (userAddress || '').toLowerCase() ? ' (you)' : '';
+          return `<div class="flex items-center justify-between p-3 rounded-xl bg-[#142530]/80 border border-[#848B91]/20"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-[#FA423C]/20 flex items-center justify-center text-xs font-bold mono text-[#ECEBEC]">${escapeHtml(short.slice(0,2))}</div><div><p class="font-medium text-sm text-[#ECEBEC]">${safeName}${label}</p><p class="text-xs text-[#848B91] mono">${escapeHtml(short)}</p></div></div><span class="mono text-[#FA423C] font-semibold">+${ethers.formatEther(amt)} RBNT</span></div>`;
+        }).join('');
+      } catch (e) {
+        console.warn('Sponsors load failed', e);
+        el.innerHTML = '<p class="text-sm text-[#848B91]">No reinforcements yet.</p>';
+      }
+    }
+
+    function updateCooldownButton() {
+      if (!quizCooldownUntil || Date.now() >= quizCooldownUntil) {
+        quizCooldownUntil = 0;
+        if (quizCooldownInterval) {
+          clearInterval(quizCooldownInterval);
+          quizCooldownInterval = null;
+        }
+        updateMainButton();
+        return;
+      }
+      const btn = document.getElementById('main-action-button');
+      const desc = document.getElementById('main-action-desc');
+      const costLine = document.getElementById('main-action-cost');
+      if (!btn || !desc || !costLine) return;
+      const secs = Math.max(0, Math.ceil((quizCooldownUntil - Date.now()) / 1000));
+      const m = Math.floor(secs / 60);
+      const s = secs % 60;
+      btn.disabled = true;
+      btn.classList.add('opacity-70', 'cursor-not-allowed', 'main-action-cooldown', 'mono');
+      btn.classList.remove('opacity-90');
+      btn.textContent = `Try again in ${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      desc.textContent = 'Quiz cooldown after two wrong answers.';
+      costLine.classList.add('hidden');
+    }
+
+    function updateMainButton() {
+      const btn = document.getElementById('main-action-button');
+      const desc = document.getElementById('main-action-desc');
+      const costLine = document.getElementById('main-action-cost');
+      if (!btn || !desc || !costLine) return;
+      btn.disabled = false;
+      btn.classList.remove('opacity-90', 'opacity-70', 'cursor-not-allowed', 'main-action-cooldown', 'mono');
+      if (timerSeconds > 0) {
+        if (quizCooldownUntil && Date.now() < quizCooldownUntil) {
+          updateCooldownButton();
+          return;
+        }
+        if (!contractInstance || !walletSigner) {
+          btn.textContent = 'Connect wallet';
+          desc.textContent = 'Connect your wallet to extend the cycle.';
+          costLine.classList.add('hidden');
+          return;
+        }
+        btn.textContent = 'Initiate Pulse';
+        desc.textContent = 'Extend the cycle. Strengthen the pool.';
+        costLine.classList.remove('hidden');
+      } else {
+        if (!contractInstance || !walletSigner) {
+          btn.textContent = 'Connect wallet';
+          desc.innerHTML = 'Connect your wallet to close the cycle<br>and distribute energy.';
+          costLine.classList.add('hidden');
+          return;
+        }
+        btn.textContent = 'Stabilize Cycle';
+        btn.classList.add('opacity-90');
+        desc.textContent = 'Close the cycle and distribute energy.';
+        costLine.classList.add('hidden');
+      }
+    }
+
+    let finalizingInProgress = false;
+
+    async function handleFinalizeRound() {
+      if (timerSeconds > 0) return;
+      if (finalizingInProgress) return; // avoid double invocation
+      finalizingInProgress = true;
+      const btn = document.getElementById('main-action-button');
+      btn.disabled = true;
+      btn.textContent = 'Finalizing…';
+      const apiBase = GAME_CONFIG.apiBase || '/api';
+      try {
+        // cache:no-store – always a fresh response, never 304
+        var check = await fetch(apiBase + '/can-finalize', { cache: 'no-store' })
+          .then(function(r) { return r.json(); })
+          .catch(function() { return { canFinalize: false }; });
+        if (!check.canFinalize) {
+          showToast('Round still active on-chain. Refreshing…', true);
+          await refreshRoundFromChain();
+          btn.disabled = false;
+          updateMainButton();
+          finalizingInProgress = false;
+          return;
+        }
+        showToast('Finalizing cycle…');
+        const r = await fetch(apiBase + '/finalize-round', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          if (data.error && (data.error.includes('not ended') || data.error.includes('already finalized'))) {
+            showToast('Round still active on-chain. Refreshing data…', true);
+            await refreshRoundFromChain();
+          } else {
+            throw new Error(data.error || 'Finalize failed');
+          }
+          btn.disabled = false;
+          updateMainButton();
+          finalizingInProgress = false;
+          return;
+        }
+        showToast('Cycle finalized. New cycle started.');
+        await new Promise(r => setTimeout(r, 1500));
+        await refreshRoundFromChain();
+        setTimeout(() => refreshRoundFromChain(), 3000);
+      } catch (e) {
+        const msg = e.message || 'Transaction failed.';
+        showToast(msg.length > 50 ? 'Finalize failed.' : msg, true);
+      }
+      btn.disabled = false;
+      finalizingInProgress = false;
+      updateMainButton();
+    }
+
+    function updateTimer() {
+      if (lastRoundEndTime > 0) {
+        var estimatedChainNow;
+        if (chainTimeAtLastRefresh > 0 && localTimeAtLastRefresh > 0) {
+          var localElapsed = Math.floor(Date.now() / 1000) - localTimeAtLastRefresh;
+          estimatedChainNow = chainTimeAtLastRefresh + localElapsed;
+        } else {
+          estimatedChainNow = Math.floor(Date.now() / 1000);
+        }
+        timerSeconds = Math.max(0, lastRoundEndTime - estimatedChainNow);
+      } else if (timerSeconds > 0) {
+        timerSeconds--;
+      }
+      const timerDisplay = document.getElementById('timer-display');
+      const progressRing = document.getElementById('progress-ring');
+      const clockStatusLine = document.getElementById('clock-status-line');
+      const clockLabel = document.getElementById('clock-label');
+      timerDisplay.textContent = formatTime(Math.max(0, timerSeconds));
+      if (clockStatusLine) clockStatusLine.textContent = timerSeconds > 0 ? 'The cycle is alive' : 'Cycle ended';
+      if (clockLabel) clockLabel.textContent = timerSeconds > 0 ? 'Time Remaining' : 'STABILIZATION REQUIRED';
+      const maxSeconds = 6 * 60 * 60;
+      const progress = Math.min(1, timerSeconds / maxSeconds);
+      const circumference = 2 * Math.PI * 90;
+      progressRing.style.strokeDashoffset = circumference * (1 - progress);
+    }
+
+    // Show toast notification
+    function showToast(message, isError = false) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl font-medium transition-all duration-300 z-50 text-[#ECEBEC] ${isError ? 'bg-[#FA423C]' : 'bg-[#FA423C]'}`;
+      toast.style.opacity = '1';
+      toast.style.transform = 'translate(-50%, 0)';
+      
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translate(-50%, 1rem)';
+      }, 3000);
+    }
+
+    async function openQuizModal() {
+      if (!userAddress || !walletSigner) {
+        showToast('Connect your wallet first.', true);
+        return;
+      }
+      const provider = getProvider();
+      let roundId;
+      try {
+        const contract = contractInstance || new ethers.Contract(GAME_CONFIG.contractAddress, POT_GAME_ABI, provider);
+        roundId = (await contract.currentRoundId()).toString();
+      } catch (e) {
+        showToast('Could not read round from chain.', true);
+        return;
+      }
+      const apiBase = GAME_CONFIG.apiBase || '/api';
+      let res;
+      try {
+        res = await fetch(`${apiBase}/question?address=${encodeURIComponent(userAddress)}`);
+      } catch (e) {
+        showToast('Backend unavailable. Try again.', true);
+        return;
+      }
+      if (res.status === 429) {
+        const data = await res.json().catch(() => ({}));
+        const retryAt = data.retryAt ? new Date(data.retryAt).getTime() : 0;
+        if (retryAt > Date.now()) {
+          quizCooldownUntil = retryAt;
+          if (quizCooldownInterval) clearInterval(quizCooldownInterval);
+          quizCooldownInterval = setInterval(updateCooldownButton, 1000);
+          updateCooldownButton();
+        }
+        return;
+      }
+      if (!res.ok) {
+        showToast('Could not load question.', true);
+        return;
+      }
+      const data = await res.json();
+      const question = data.question;
+      const options = Array.isArray(data.options) ? data.options : [];
+      const explanation = data.explanation != null ? String(data.explanation).trim() : '';
+      const modal = document.getElementById('quiz-modal');
+      const content = document.getElementById('modal-content');
+      const optionsEl = document.getElementById('quiz-options');
+      optionsEl.innerHTML = '';
+      const optionLabels = ['A', 'B', 'C', 'D'];
+      options.forEach((text, i) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'quiz-option w-full p-4 rounded-xl border border-[#848B91]/40 text-left hover:border-[#FA423C]/50 transition-all text-[#ECEBEC]';
+        btn.dataset.answer = text;
+        btn.innerHTML = `<span class="mono">${optionLabels[i] || i + 1}.</span> ${text}`;
+        optionsEl.appendChild(btn);
+      });
+      modal.dataset.roundId = roundId;
+      modal.dataset.explanation = explanation;
+      document.getElementById('quiz-question').textContent = question;
+      document.getElementById('quiz-status').textContent = 'Answer the question to unlock the reset action.';
+      document.getElementById('confirm-transaction').classList.add('hidden');
+      pendingSignature = null;
+      pendingExpiresAt = null;
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        content.style.opacity = '1';
+        content.style.transform = 'scale(1)';
+      }, 10);
+      quizTimeLeft = 15;
+      updateQuizTimer();
+      quizTimerInterval = setInterval(updateQuizTimer, 1000);
+    }
+
+    function updateQuizTimer() {
+      const barEl = document.getElementById('quiz-timer-bar');
+      if (barEl) barEl.style.width = Math.max(0, (quizTimeLeft / 15) * 100) + '%';
+      if (quizTimeLeft <= 0) {
+        clearInterval(quizTimerInterval);
+        closeQuizModal();
+        showToast('Time expired! Try again.', true);
+      }
+      quizTimeLeft--;
+    }
+
+    function closeQuizModal() {
+      const modal = document.getElementById('quiz-modal');
+      const content = document.getElementById('modal-content');
+      
+      clearInterval(quizTimerInterval);
+      
+      content.style.opacity = '0';
+      content.style.transform = 'scale(0.95)';
+      
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 200);
+    }
+
+    async function handleQuizAnswer(e) {
+      const btn = e.target.closest('.quiz-option');
+      if (!btn || btn.classList.contains('disabled')) return;
+      const selectedAnswer = (btn.dataset.answer || '').trim();
+      const roundId = document.getElementById('quiz-modal').dataset.roundId;
+      if (!userAddress || !roundId) return;
+      document.querySelectorAll('.quiz-option').forEach(opt => {
+        opt.classList.add('disabled');
+        opt.disabled = true;
+      });
+      clearInterval(quizTimerInterval);
+      const apiBase = GAME_CONFIG.apiBase || '/api';
+      let res;
+      try {
+        res = await fetch(`${apiBase}/answer`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address: userAddress, answer: selectedAnswer, roundId })
+        });
+      } catch (err) {
+        document.getElementById('quiz-status').innerHTML = '<span class="text-[#FA423C]">Network error. Try again.</span>';
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      if (data.success && data.signature != null && data.expiresAt != null) {
+        pendingSignature = data.signature;
+        pendingExpiresAt = data.expiresAt;
+        btn.classList.add('correct');
+        const statusEl = document.getElementById('quiz-status');
+        statusEl.innerHTML = '<span class="text-[#FA423C]">✓ Correct!</span><p class="mt-2 text-sm text-[#848B91]">Pulse unlocked<br>You are authorized to extend the cycle.</p>';
+        document.getElementById('confirm-transaction').classList.remove('hidden');
+      } else {
+        btn.classList.add('incorrect');
+        document.querySelectorAll('.quiz-option').forEach(opt => {
+          if (opt.dataset.answer && opt.dataset.answer.trim().toLowerCase() !== selectedAnswer.toLowerCase()) {
+            opt.classList.add('correct');
+          }
+        });
+        const msg = data.cooldown ? 'Too many wrong answers. Try again later.' : 'Incorrect. Try again.';
+        const explanation = document.getElementById('quiz-modal').dataset.explanation || '';
+        const cooldownNote = data.cooldown ? '' : '<p class="mt-2 text-xs text-[#D9D9D9]">One more wrong answer will trigger a 30-minute cooldown.</p>';
+        const statusEl = document.getElementById('quiz-status');
+        statusEl.innerHTML = `<span class="text-[#FA423C]">✗ ${msg}</span>` +
+          (explanation ? `<div class="mt-3 p-3 rounded-xl bg-[#142530]/80 border border-[#848B91]/30 text-left text-sm text-[#D9D9D9]">${escapeHtml(explanation)}</div>` : '') +
+          cooldownNote +
+          '<button type="button" id="quiz-try-again-btn" class="mt-4 w-full py-3 rounded-xl border border-[#FA423C]/40 bg-[#FA423C]/10 text-[#ECEBEC] font-medium hover:bg-[#FA423C]/20 transition-colors">Try again</button>';
+        document.getElementById('quiz-try-again-btn').addEventListener('click', closeQuizModal);
+      }
+    }
+
+    async function handleConfirmTransaction() {
+      if (!contractInstance || !pendingSignature || pendingExpiresAt == null) {
+        closeQuizModal();
+        return;
+      }
+      const confirmBtn = document.getElementById('confirm-transaction');
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Sending…';
+      try {
+        const fee = await contractInstance.currentResetFee();
+        const sigHex = pendingSignature.startsWith('0x') ? pendingSignature : '0x' + pendingSignature;
+        const tx = await contractInstance.resetTimer(pendingExpiresAt, sigHex, { value: fee });
+        showToast('Transaction submitted. Waiting for confirmation…');
+        await tx.wait();
+        showToast('🎉 Timer reset! Transaction confirmed.');
+        try { await fetch((GAME_CONFIG.apiBase || '/api') + '/round-state/refresh', { method: 'POST' }); } catch (_) {}
+        await refreshRoundFromChain();
+      } catch (e) {
+        const msg = e.reason || e.message || 'Transaction failed.';
+        showToast(msg.length > 60 ? 'Transaction failed.' : msg, true);
+      }
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Confirm Transaction';
+      pendingSignature = null;
+      pendingExpiresAt = null;
+      closeQuizModal();
+    }
+
+    function openSponsorModal() {
+      if (!userAddress || !contractInstance) {
+        showToast('Connect your wallet first.', true);
+        return;
+      }
+      document.getElementById('sponsor-modal').classList.remove('hidden');
+    }
+
+    function closeSponsorModal() {
+      document.getElementById('sponsor-modal').classList.add('hidden');
+    }
+
+    async function handleSponsorSubmit() {
+      if (!contractInstance || !walletSigner) {
+        showToast('Connect your wallet first.', true);
+        closeSponsorModal();
+        return;
+      }
+      const amountStr = (document.getElementById('sponsor-amount').value || '').trim();
+      if (!amountStr || parseFloat(amountStr) <= 0) {
+        showToast('Enter a valid amount.', true);
+        return;
+      }
+      const submitBtn = document.getElementById('submit-sponsor');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending…';
+      try {
+        const weiAmount = ethers.parseEther(amountStr);
+        const tx = await contractInstance.sponsorPot({ value: weiAmount });
+        showToast('Transaction submitted. Waiting for confirmation…');
+        await tx.wait();
+        const apiBase = GAME_CONFIG.apiBase || '/api';
+        const displayName = (document.getElementById('sponsor-name').value || '').trim();
+        const addrForName = userAddress || (walletSigner ? (await walletSigner.getAddress()) : null);
+        if (displayName && addrForName) {
+          try {
+            const r = await fetch(apiBase + '/sponsor-display-name', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ address: addrForName, displayName })
+            });
+            if (!r.ok) {
+              console.warn('Display name save failed:', r.status, await r.text());
+            }
+          } catch (e) {
+            console.warn('Display name request failed', e);
+          }
+        }
+        showToast(`🎁 Thank you! +${amountStr} RBNT added to the prize pool.`);
+        // Force-refresh backend cache so potBalance and sponsors update immediately
+        try { await fetch(apiBase + '/round-state/refresh', { method: 'POST' }); } catch (_) {}
+        await refreshRoundFromChain();
+        closeSponsorModal();
+      } catch (e) {
+        const msg = e.reason || e.message || 'Transaction failed.';
+        showToast(msg.length > 50 ? 'Transaction failed.' : msg, true);
+      }
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Confirm Contribution';
+    }
+
+    // Render function for config updates
+    async function onConfigChange(cfg) {
+      const font = cfg.font_family || defaultConfig.font_family;
+      
+      // Apply text content
+      document.getElementById('prize-label').textContent = cfg.prize_label || defaultConfig.prize_label;
+      document.getElementById('rules-title').textContent = cfg.rules_title || defaultConfig.rules_title;
+      updateMainButton();
+      
+      // Apply colors
+      document.body.style.backgroundColor = cfg.background_color || defaultConfig.background_color;
+      document.getElementById('app-container').style.backgroundColor = cfg.background_color || defaultConfig.background_color;
+      
+      // Apply font
+      document.body.style.fontFamily = `${font}, sans-serif`;
+    }
+
+    // Initialize Element SDK
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities: (cfg) => ({
+          recolorables: [
+            {
+              get: () => cfg.background_color || defaultConfig.background_color,
+              set: (v) => { cfg.background_color = v; window.elementSdk.setConfig({ background_color: v }); }
+            },
+            {
+              get: () => cfg.card_color || defaultConfig.card_color,
+              set: (v) => { cfg.card_color = v; window.elementSdk.setConfig({ card_color: v }); }
+            },
+            {
+              get: () => cfg.text_color || defaultConfig.text_color,
+              set: (v) => { cfg.text_color = v; window.elementSdk.setConfig({ text_color: v }); }
+            },
+            {
+              get: () => cfg.accent_color || defaultConfig.accent_color,
+              set: (v) => { cfg.accent_color = v; window.elementSdk.setConfig({ accent_color: v }); }
+            },
+            {
+              get: () => cfg.success_color || defaultConfig.success_color,
+              set: (v) => { cfg.success_color = v; window.elementSdk.setConfig({ success_color: v }); }
+            }
+          ],
+          borderables: [],
+          fontEditable: {
+            get: () => cfg.font_family || defaultConfig.font_family,
+            set: (v) => { cfg.font_family = v; window.elementSdk.setConfig({ font_family: v }); }
+          },
+          fontSizeable: undefined
+        }),
+        mapToEditPanelValues: (cfg) => new Map([
+          ['prize_label', cfg.prize_label || defaultConfig.prize_label],
+          ['button_text', cfg.button_text || defaultConfig.button_text],
+          ['rules_title', cfg.rules_title || defaultConfig.rules_title]
+        ])
+      });
+      
+      config = window.elementSdk.config || config;
+    }
+
+    document.getElementById('main-action-button').addEventListener('click', async () => {
+      if (timerSeconds > 0) {
+        if (!contractInstance || !walletSigner) {
+          await connectWallet();
+          updateMainButton();
+          return;
+        }
+        openQuizModal();
+      } else {
+        if (!contractInstance || !walletSigner) {
+          await connectWallet();
+          updateMainButton();
+          return;
+        }
+        handleFinalizeRound();
+      }
+    });
+    document.getElementById('close-modal').addEventListener('click', closeQuizModal);
+    document.getElementById('modal-backdrop').addEventListener('click', closeQuizModal);
+    document.getElementById('quiz-options').addEventListener('click', handleQuizAnswer);
+    document.getElementById('confirm-transaction').addEventListener('click', handleConfirmTransaction);
+    
+    document.getElementById('sponsor-button').addEventListener('click', async () => {
+      if (!contractInstance || !walletSigner) {
+        await connectWallet();
+        if (!contractInstance || !walletSigner) {
+          showToast('Connect your wallet to add a contribution.', true);
+          return;
+        }
+      }
+      openSponsorModal();
+    });
+    document.getElementById('close-sponsor').addEventListener('click', closeSponsorModal);
+    document.getElementById('sponsor-backdrop').addEventListener('click', closeSponsorModal);
+    document.getElementById('submit-sponsor').addEventListener('click', handleSponsorSubmit);
+
+    updateTimer();
+    setInterval(updateTimer, 1000);
+    updateMainButton();
+    refreshRoundFromChain();
+    setInterval(refreshRoundFromChain, 15000); // Auto-refresh chain data every 15s
+    onConfigChange(config);
+    if (window.ethereum) {
+      window.ethereum.on('accountsChanged', handleAccountsChanged);
+    }
+    const addr = GAME_CONFIG.contractAddress;
+    if (addr) {
+      const linkEl = document.getElementById('contract-address-link');
+      const textEl = document.getElementById('contract-address-short');
+      if (linkEl) linkEl.href = (GAME_CONFIG.blockExplorerUrl || 'https://redbelly.testnet.routescan.io/address/') + addr;
+      if (textEl) textEl.textContent = addr;
+    }
+
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9c84424c0399f4a5',t:'MTc3MDE0NjE0Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

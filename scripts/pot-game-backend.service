@@ -1,0 +1,31 @@
+# systemd unit for Pot Game backend - autorestart on reboot and crash.
+# Install (as root):
+#   sudo cp scripts/pot-game-backend.service /etc/systemd/system/
+#   sudo sed -i "s|/root/game|$(pwd)|g" /etc/systemd/system/pot-game-backend.service   # optional: project path
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable pot-game-backend
+#   sudo systemctl start pot-game-backend
+#
+# Commands:
+#   sudo systemctl status pot-game-backend
+#   sudo systemctl restart pot-game-backend
+#   sudo journalctl -u pot-game-backend -f
+
+[Unit]
+Description=Redbelly Pot Game Backend (quiz + sponsor names)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/game/backend
+ExecStart=/usr/bin/env node index.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PORT=3004
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

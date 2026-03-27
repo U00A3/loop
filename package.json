@@ -1,0 +1,17 @@
+{
+  "name": "redbelly-pot-game",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "deploy": "node scripts/deploy-for-verify.js",
+    "build:css": "tailwindcss -i ./styles/tailwind-src.css -o ./css/tailwind.css --minify"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "ethers": "^6.9.0",
+    "solc": "0.8.20"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  }
+}

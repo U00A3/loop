@@ -1,0 +1,28 @@
+# Secrets and env
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+backend/node_modules/
+
+# Build / cache / logs
+*.log
+.DS_Store
+.cursor/
+
+# Backend runtime (local state)
+backend/data/*.json
+!backend/data/.gitkeep
+
+# Editor / backup
+*.bak
+*.backup
+
+# Local / personal notes
+my/
+
+# Question banks (copy example.json → your own *.json locally)
+questions/*.json
+!questions/example.json

@@ -1,0 +1,28 @@
+{
+  "name": "Example",
+  "title": "Example quiz deck - copy this file to e.g. basic.json and fill with real questions",
+  "questions": [
+    {
+      "question": "What type of consensus mechanism does Redbelly Network use?",
+      "options": [
+        "Proof of Work (PoW)",
+        "Proof of Stake (PoS)",
+        "Democratic Byzantine Fault Tolerance (DBFT)",
+        "Delegated Proof of Stake (DPoS)"
+      ],
+      "correct": 2,
+      "explanation": "Redbelly Network uses DBFT, which gives deterministic finality and tolerates up to one-third malicious nodes."
+    },
+    {
+      "question": "What is the primary advantage of Redbelly's consensus algorithm?",
+      "options": [
+        "High energy consumption",
+        "Transaction finality within seconds",
+        "Unlimited block size",
+        "Anonymous transactions"
+      ],
+      "correct": 1,
+      "explanation": "DBFT provides fast, deterministic finality compared to probabilistic consensus."
+    }
+  ]
+}
